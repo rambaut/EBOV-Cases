@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>H7N9 Avian Influenza Cases</title>
+<link rel="stylesheet" type="text/css" href="css/dc.css"/>
+<link rel="stylesheet" href="css/leaflet.css"/>
+<link rel="stylesheet" href="css/MarkerCluster.css"/>
+<link rel="stylesheet" href="css/MarkerCluster.Default.css"/>
+<style>
+
+body {
+    font-family: Helvetica, Arial, sans-serif;
+    width: 900px;
+}
+
+footer {
+    padding: 2em 0 1em 0;
+    font-size: 12px;
+}
+
+h1 {
+    font-size: 96px;
+    margin-top: .3em;
+    margin-bottom: 0;
+}
+
+h1 + h2 {
+    margin-top: 0;
+}
+
+h2 {
+    font-weight: 100;
+    font-size: 28px;
+}
+
+h1, h2 {
+    font-family: Helvetica, Arial, sans-serif;
+
+    text-rendering: optimizeLegibility;
+}
+
+#body > p {
+    line-height: 1.5em;
+    width: 640px;
+    text-rendering: optimizeLegibility;
+}
+
+#charts {
+    padding: 10px 0;
+    display: block;
+}
+
+#lists {
+    display: block;
+}
+
+.dc-chart {
+    margin-bottom: 20px;
+    float: none;
+}
+
+.dc-chart g.row text {
+    fill: black;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.reset {
+    padding-left: 1em;
+    font-size: smaller;
+    color: #aaa;
+}
+
+.reset-all {
+    color: #aaa;
+}
+
+.axis path, .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+.axis text {
+    font: 10px;
+}
+
+.title {
+    font-weight: 200;
+    font-size: 14px;
+}
+
+.brush rect.extent {
+    fill: steelblue;
+    fill-opacity: .125;
+}
+
+.brush .resize path {
+    fill: #eee;
+    stroke: #666;
+}
+
+#onset-chart {
+    width: 920px;
+    height: 170px;
+}
+
+#onset-chart .bar {
+    fill: teal;
+}
+
+#province-chart {
+    width: 280px;
+    height: 180px;
+}
+
+#age-chart {
+    width: 320px;
+    height: 180px;
+}
+
+#age-chart .bar {
+    fill: #8B475D;
+}
+
+#gender-chart {
+    width: 180px;
+    height: 180px;
+}
+
+#death-chart {
+    width: 180px;
+    height: 180px;
+}
+
+#cluster-chart {
+    width: 180px;
+    height: 180px;
+}
+
+#case-list .month {
+    margin-bottom: .4em;
+    font-size: 14px;
+}
+
+#case-list .individual {
+    margin-left: 100px;
+    padding-left: 10px;
+    line-height: 1.5em;
+    background: #eee;
+    width: 780px;
+    margin-bottom: 1px;
+    font-size: 12px;
+}
+
+#case-list-header .header {
+    margin: 0px;
+    padding: 0px;
+    margin-left: 100px;
+    padding-left: 10px;
+    width: 780px;
+    font-size: 14px;
+}
+
+#case-list .individual div {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#case-list-header .header div {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+div.onset,
+div.death {
+    width: 60px;
+    padding-right: 10px;
+    text-align: left;
+}
+
+div.age,
+div.gender {
+    width: 40px;
+    padding-right: 10px;
+    text-align: left;
+}
+
+div.province,
+div.city {
+    width: 100px;
+    padding-right: 10px;
+    text-align: left;
+}
+
+div.notes {
+    color: #999;
+    width: 260px;
+    padding-right: 10px;
+    text-align: left;
+    font: 10px;
+}
+
+#data-count {
+    text-align: right;
+    width: 850px;
+    margin-top: 10px;
+    margin-right: 15px;
+    font-size: 14px;
+}
+
+#data-count .filter-count {
+    color: #3182bd;
+    font-weight: 400;
+}
+
+#data-count .total-count {
+    color: #3182bd;
+    font-weight: 400;
+}
+
+.inline-div {
+    display: inline-block;
+}
+
+.align-top {
+    vertical-align: top;
+}
+
+.align-bottom {
+    vertical-align: bottom;
+}
+
+.block-div {
+    display: block;
+}
+
+
+</style>
+
+<style type="text/css">
+
+    svg {
+        display: block;
+    }
+
+    circle {
+        fill: brown;
+        fill-opacity: .5;
+        stroke: #fff;
+    }
+
+    circle:hover {
+        fill: red;
+        fill-opacity: 1;
+        stroke: #fff;
+    }
+
+    #province path {
+        fill: steelblue;
+        fill-opacity: 0.25;
+        stroke: #fff;
+        stroke-width: 1.5px;
+        vector-effect: non-scaling-stroke;
+    }
+
+    .info {
+        width: 200px;
+        padding: 6px 8px;
+        font: 14px/16px Helvetica, Arial, sans-serif;
+        background: white;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        border-radius: 5px;
+    }
+
+    .info h4 {
+        margin: 0 0 5px;
+        color: #777;
+    }
+
+    .legend {
+        width: 80px;
+        line-height: 18px;
+        color: #555;
+    }
+
+    .legend i {
+        width: 18px;
+        height: 18px;
+        float: left;
+        margin-right: 8px;
+        opacity: 0.7;
+    }
+
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+
+
+</style>
+
+
+<div id="body">
+
+    <div id="charts">
+        <div>
+            <div id="location-chart" class="dc-chart inline-div align-top">
+                <span class="title" class="inline-div">Cases by Location</span>
+                <a class="reset title" href="javascript:locationChart.filterAll();dc.redrawAll();"
+                   style="display: none;">reset</a>
+            </div>
+            <div id="death-chart" class="dc-chart inline-div align-bottom">
+                <span class="title">By Outcome</span>
+                <a class="reset title" href="javascript:deathChart.filterAll();dc.redrawAll();"
+                   style="display: none;">reset</a>
+            </div>
+            <!--
+            <div id="map" class="inline-div align-top"></div>
+            -->
+        </div>
+        <div id="time-chart" class="dc-chart">
+            <span class="title">Cases</span>
+            <a class="reset title" href="javascript:timeChart.filterAll();dc.redrawAll();"
+               style="display: none;">reset</a>
+        </div>
+        <div id="cumulative-chart" class="dc-chart">
+            <span class="title">Cases Cumulative</span>
+            <a class="reset title" href="javascript:cumulativeChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+        </div>
+    </div>
+    <div>
+        <div id="data-count" class="title">
+            <span class="filter-count"></span> selected out of <span class="total-count"></span> cases | <a
+                class="reset-all title"
+                href="javascript:dc.filterAll(); renderAll();">reset all</a>
+        </div>
+    </div>
+    <!--
+    <div id="lists" class="block-div">
+        <div id="case-list-header">
+            <div class="header title">
+                <div class="onset">Date</div>
+                <div class="death">Death</div>
+                <div class="age">Age</div>
+                <div class="gender">Gender</div>
+                <div class="province">Province</div>
+                <div class="city">City</div>
+            </div>
+        </div>
+        <div id="case-list" class="list"></div>
+    </div>
+    -->
+    <!--
+    <footer>
+      <span style="float:right;">
+        Released under the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache License 2.0</a>.
+      </span>
+      Uses <a href="http://squareup.com">Square, Inc.</a>
+    </footer>
+    -->
+
+</div>
+
+<script src="js/crossfilter.min.js"></script>
+<script src="js/d3.min.js"></script>
+<script src="js/dc.js"></script>
+<script src="js/queue.min.js"></script>
+<script src="js/leaflet.js"></script>
+<script src="js/leaflet.markercluster.js"></script>
+<script src="js/utils.js"></script>
+
+<!--
+<script src="crossfilter.v1.min.js"></script>
+<script src="d3.v3.min.js"></script>
+-->
+
+<script>
+
+var timeChart = dc.barChart("#time-chart");
+var cumulativeChart = dc.lineChart("#cumulative-chart");
+var locationChart = dc.rowChart("#location-chart");
+var deathChart = dc.rowChart("#death-chart");
+
+dc.constants.EVENT_DELAY = 0;
+
+//var map = L.map('map', {
+//    center: [31.25, 121.4333333],
+//    zoom: 4,
+//    maxZoom: 8,
+//    minZoom: 2
+//});
+//
+//map.attributionControl.removeFrom(map);
+//
+//L.control.scale().addTo(map);
+//
+////var layer = new L.StamenTileLayer('toner');
+////map.addLayer(layer);
+//
+//L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
+//    key: "ffed45bc02bf40009f3d5c7e4dcf7f63",
+//    styleId: 44909
+////		styleId: 104059
+//}).addTo(map);
+
+queue()
+        .defer(d3.json, "data/countries.geojson")
+//        .defer(d3.json, "data/locations.json")
+        .defer(d3.csv, "data/cases.csv")
+        .await(ready);
+
+
+function ready(error, countryData, /*locationData, */caseData) {
+    if (error) return console.log("there was an error loading the data: " + error);
+
+
+    // Various formatters.
+    var formatNumber = d3.format(",d"),
+            formatPercent = d3.format(".1%"),
+            formatDate = d3.time.format("%Y-%m-%d"),
+            formatPrettyDate = d3.time.format("%d %b"),
+            formatMonth = d3.time.format("%b %Y");
+
+    var cases = [];
+    var deaths = [];
+    var countries = [];
+    var locations = [];
+
+    var nestByDate = d3.nest()
+            .key(function (d) {
+                return d3.time.month(d.date);
+            });
+
+    // Create a list of countries from the GeoJSON doc...
+    countryData.features.forEach(function (d) {
+        var c = {
+            name: d.properties.name,
+            cumulative: []
+        };
+        countries.push(c);
+    });
+
+    caseData.forEach(function (d, i) {
+        d.index = i;
+
+        if (d.location.length == 0) {
+            if (d.date != null) {
+                d.date = formatDate.parse(d.date);
+            }
+
+            var found = false;
+
+            countries.forEach(function (country) {
+                if (d.country == country.name) {
+                    d['country'] = country;
+
+                    var c = {
+                        date: d.date,
+                        cases: d.cases_cumulative,
+                        deaths: d.deaths_cumulative
+                    };
+
+                    var last = country.cumulative[country.cumulative.length - 1];
+
+                    if (c.cases.length === 0) {
+                        c.cases = last.cases;
+                    }
+
+                    if (c.deaths.length === 0) {
+                        c.deaths = last.deaths;
+                    }
+                    c.cases = +c.cases;
+                    c.deaths = +c.deaths;
+
+                    country.cumulative.push(c);
+
+                    found = true;
+                }
+            });
+            if (!found) {
+                console.log("Country not found: " + d.country);
+                d.country = null;
+            }
+
+//        if (d.location.length > 0) {
+//            locationDate.forEach(function (location) {
+//                if (d.location == location.name) {
+//                    d['location'] = location;
+//                    found = true;
+//                }
+//            });
+//            if (!found) console.log("Location not found: " + d.location);
+//        }
+//        if (!found) d.location = null;
+
+            found = false;
+        }
+    });
+
+    countries.forEach(function (d, i) {
+        // iterate through the cumulative list for each country looking for drops
+        // in the cumulative counts (presumably due to re-evaluation of cases). Feed
+        // these back to previous counts.
+        var done = true;
+        var next;
+        do {
+            d.cumulative.forEach(function (d2, i) {
+                if (i < d.cumulative.length - 1) {
+                    next = d.cumulative[i + 1];
+                    if (next.cases < d2.cases) {
+                        d2.cases = next.cases;
+//                        done = false;
+                    }
+                    if (next.deaths < d2.deaths) {
+                        d2.deaths = next.deaths;
+//                        done = false;
+                    }
+                }
+            });
+        } while (!done);
+
+        // create items for each new case and death
+        var last;
+        d.cumulative.forEach(function (d2, i) {
+            if (i == 0) {
+                caseCount = d2.cases;
+                deathCount = d2.deaths;
+            } else {
+                caseCount = d2.cases - last.cases;
+                deathCount = d2.deaths - last.deaths;
+            }
+            for (j = 0; j < caseCount; j++) {
+                var c = {
+                    date: d2.date,
+                    country: d,
+                    location: null,
+                    isDead: (j <= deathCount)
+                }
+                cases.push(c);
+            }
+
+            last = d2;
+        });
+    });
+
+    // Create the crossfilter for the relevant dimensions and groups.
+    var crossFilter = crossfilter(cases),
+            filteredCases = crossFilter.groupAll(),
+            allCases = crossFilter.dimension(function (d) {
+                return d;
+            }),
+            dateFilter = crossFilter.dimension(function (d) {
+                return d.date;
+            }),
+            dateGroups = dateFilter.group(d3.time.day),
+            _group = dateFilter.group().reduceSum(function (d) {
+                return 1;
+            }),
+            cumulativeGroups = {
+                all: function () {
+                    var cumulate = 0;
+                    var g = [];
+                    _group.all().forEach(function (d, i) {
+                        cumulate += d.value;
+                        g.push({key: d.key, value: cumulate})
+                    });
+                    return g;
+                }
+            },
+
+            countryFilter = crossFilter.dimension(function (d) {
+                return d.country.name;
+            }),
+            countryGroups = countryFilter.group(function (d) {
+                return d;
+            }),
+            deathFilter = crossFilter.dimension(function (d) {
+                return d.isDead;
+            }),
+            deathGroups = deathFilter.group(function (d) {
+                return d;
+            })
+
+    timeChart.width(900)
+            .height(120)
+            .transitionDuration(0)
+            .margins({top: 10, right: 20, bottom: 20, left: 40})
+            .dimension(dateFilter)
+            .group(dateGroups)
+            .centerBar(true)
+            .gap(-1)
+            .x(d3.time.scale().domain([new Date(2014, 2, 1), new Date()]))
+            .round(d3.time.day.round)
+            .xUnits(d3.time.days)
+            .on("filtered", function (d) {
+                renderAll();
+            });
+
+    cumulativeChart
+            .width(900)
+            .height(120)
+            .renderArea(true)
+            .transitionDuration(0)
+            .rangeChart(timeChart)
+            .margins({top: 10, right: 20, bottom: 20, left: 40})
+            .dimension(dateFilter)
+            .group(cumulativeGroups)
+//            .stack(countryGroups, "Country", function (d) {
+//                return d.value;
+//            })
+            .renderHorizontalGridLines(true)
+            .x(d3.time.scale().domain([new Date(2014, 2, 1), new Date()]))
+            .round(d3.time.day.round)
+            .xUnits(d3.time.days)
+            .on("filtered", function (d) {
+                renderAll();
+            });
+
+    locationChart.width(280)
+            .height(120)
+            .transitionDuration(0)
+            .margins({top: 0, right: 20, bottom: 38, left: 20})
+            .dimension(countryFilter)
+            .group(countryGroups)
+            .elasticX(false)
+            .colors(['LightSteelBlue'])
+            .label(function (d) {
+                return d.value + " " + d.key;
+            })
+            .title(function (d) {
+                return d.value;
+            })
+            .on("filtered", function () {
+                renderAll();
+            })
+            .xAxis().ticks(5);
+
+    console.log(deathGroups.all());
+
+    deathChart
+            .transitionDuration(0)
+            .width(180)
+            .height(80)
+            .margins({top: 0, right: 0, bottom: 20, left: 20})
+            .dimension(deathFilter)
+            .group(deathGroups)
+            .colors(['#CD9B1D', '#FFC125'])
+            .label(function (d) {
+                var k = d.value;
+                var n = deathGroups.all()[0].value + deathGroups.all()[1].value;
+                return k + " " + (d.key ? "dead" : "alive") + " (" + formatPercent(k / n) + ")";
+            })
+            .title(function (d) {
+                return d.value;
+            })
+            .elasticX(false)
+            .on("filtered", function () {
+                renderAll();
+            })
+            .xAxis().ticks(5);
+
+
+    // Render the initial lists.
+    var list = d3.selectAll(".list")
+            .data([caseList]);
+
+    // Render the total.
+    dc.dataCount("#data-count")
+            .dimension(crossFilter)
+            .group(filteredCases);
+
+//    var markerLayers = L.layerGroup();
+//    markerLayers.addTo(map);
+
+//    function updateMap() {
+//        markerLayers.clearLayers();
+//
+//        // Create a layer for all the cities with circles scaled by the number of cases
+//        provinces.all().forEach(function (province) {
+//            var markers = L.markerClusterGroup({
+//                maxClusterRadius: 80,
+//                spiderfyOnMaxZoom: true,
+//                showCoverageOnHover: false,
+//                zoomToBoundsOnClick: true,
+//                singleMarkerMode: true
+//            });
+//
+//            var markerList = [];
+//            allCases.top(Infinity).forEach(function (individual) {
+//                if (individual.province.name == province.key) {
+//                    var city = individual.city;
+//                    if (city != null) {
+//                        var title = city.name;
+//                        var marker = L.marker(L.latLng(city.coordinates[1], city.coordinates[0]), { title: title });
+//                        marker.bindPopup(title);
+//                        markers.addLayer(marker);
+//                        markerList.push(marker);
+//                    } else {
+//                        var title = individual.province.name + " Province";
+//                        var marker = L.marker(L.latLng(individual.province.coordinates[1], individual.province.coordinates[0]), { title: title });
+//                        marker.bindPopup(title);
+//                        markers.addLayer(marker);
+//                        markerList.push(marker);
+//                    }
+//                }
+//            });
+//
+//            markerLayers.addLayer(markers);
+//        });
+//    }
+
+    renderAll();
+
+    // Renders the specified chart or list.
+    function render(method) {
+        d3.select(this).call(method);
+    }
+
+    // Whenever the brush moves, re-rendering everything.
+    function renderAll() {
+        list.each(render);
+        dc.renderAll();
+//        updateMap();
+    }
+
+    // Like d3.time.format, but faster.
+    function parseDate(d) {
+        return new Date(2001,
+                d.substring(0, 2) - 1,
+                d.substring(2, 4),
+                d.substring(4, 6),
+                d.substring(6, 8));
+    }
+
+    window.filter = function (filters) {
+        renderAll();
+    };
+
+    window.reset = function (i) {
+        renderAll();
+    };
+
+    var args = getUrlVars();
+
+    if ('gender' in args) {
+        console.log(args.gender);
+        gender.filter(args.gender);
+    }
+
+    function caseList(div) {
+        var casesByDate = nestByDate.entries(onsetDate.top(Infinity));
+
+        div.each(function () {
+            var month = d3.select(this).selectAll(".month")
+                    .data(casesByDate, function (d) {
+                        return d.key;
+                    });
+
+            month.enter().append("div")
+                    .attr("class", "month title")
+                    .text(function (d) {
+                        return formatMonth(d.values[0].date);
+                    });
+
+            month.exit().remove();
+
+            var individual = month.order().selectAll(".individual")
+                    .data(function (d) {
+                        return d.values;
+                    }, function (d) {
+                        return d.index;
+                    });
+
+            var individualEnter = individual.enter().append("div")
+                    .attr("class", "individual");
+
+            individualEnter.append("div")
+                    .attr("class", "onset")
+                    .text(function (d) {
+                        return formatPrettyDate(d.date);
+                    });
+
+            individualEnter.append("div")
+                    .attr("class", "death")
+                    .text(function (d) {
+                        return (d.death != null ? formatPrettyDate(d.death) : "");
+                    });
+
+            individualEnter.append("div")
+                    .attr("class", "age")
+                    .text(function (d) {
+                        return d.age;
+                    });
+
+            individualEnter.append("div")
+                    .attr("class", "gender")
+                    .text(function (d) {
+                        return d.gender;
+                    });
+
+            individualEnter.append("div")
+                    .attr("class", "province")
+                    .text(function (d) {
+                        return d.province.name;
+                    });
+
+            individualEnter.append("div")
+                    .attr("class", "city")
+                    .text(function (d) {
+                        return d.city ? d.city.name : "-";
+                    });
+
+            individualEnter.append("div")
+                    .attr("class", "notes")
+                    .text(function (d) {
+                        return d.notes;
+                    });
+
+            individualEnter.append("div")
+                    .attr("class", "ref")
+                    .append("a")
+                    .attr("href", function (d) {
+                        return d.citation;
+                    })
+                    .attr("target", "_blank")
+                    .text(function (d) {
+                        return d.citation != null && d.citation.length > 0 ? "Ref" : "";
+                    });
+
+            individual.exit().remove();
+
+            individual.order();
+        });
+    } //function caseList(div)
+
+} // function ready(error, cityData, caseData)
+
+</script>
