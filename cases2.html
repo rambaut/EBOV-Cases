@@ -446,7 +446,8 @@ function ready(error, countryData, /*locationData, */caseData) {
         countries.push(c);
     });
 
-    caseData.forEach(function (d, i) {
+    for (i = 0; i < caseData.length; i++) {
+        var d = caseData[i];
         d.index = i;
 
         if (d.location.length == 0) {
@@ -475,6 +476,8 @@ function ready(error, countryData, /*locationData, */caseData) {
                     if (c.deaths.length === 0) {
                         c.deaths = last.deaths;
                     }
+
+                    // cast to integer
                     c.cases = +c.cases;
                     c.deaths = +c.deaths;
 
@@ -501,40 +504,31 @@ function ready(error, countryData, /*locationData, */caseData) {
 
             found = false;
         }
-    });
+    }
 
     countries.forEach(function (d, i) {
         // iterate through the cumulative list for each country looking for drops
         // in the cumulative counts (presumably due to re-evaluation of cases). Feed
         // these back to previous counts.
-        var done = true;
-        var next;
-        do {
-            d.cumulative.forEach(function (d2, i) {
-                if (i < d.cumulative.length - 1) {
-                    next = d.cumulative[i + 1];
-                    if (next.cases < d2.cases) {
-                        d2.cases = next.cases;
-//                        done = false;
-                    }
-                    if (next.deaths < d2.deaths) {
-                        d2.deaths = next.deaths;
-//                        done = false;
-                    }
-                }
-            });
-        } while (!done);
+        for (i = d.cumulative.length - 1; i > 0; i--) {
+            var d2 = d.cumulative[i];
+            var prev = d.cumulative[i - 1];
+            if (prev.cases > d2.cases) {
+                prev.cases = d2.cases;
+            }
+            if (prev.deaths > d2.deaths) {
+                prev.deaths = d2.deaths;
+            }
+        }
 
         // create items for each new case and death
-        var last;
-        d.cumulative.forEach(function (d2, i) {
-            if (i == 0) {
-                caseCount = d2.cases;
-                deathCount = d2.deaths;
-            } else {
-                caseCount = d2.cases - last.cases;
-                deathCount = d2.deaths - last.deaths;
-            }
+        for (i = 1; i < d.cumulative.length; i++) {
+            var d2 = d.cumulative[i];
+            var prev = d.cumulative[i - 1];
+
+            var caseCount = d2.cases - prev.cases;
+            var deathCount = d2.deaths - prev.deaths;
+
             for (j = 0; j < caseCount; j++) {
                 var c = {
                     date: d2.date,
@@ -546,7 +540,7 @@ function ready(error, countryData, /*locationData, */caseData) {
             }
 
             last = d2;
-        });
+        }
     });
 
     // Create the crossfilter for the relevant dimensions and groups.
