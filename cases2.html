@@ -309,20 +309,27 @@ div.notes {
 <div id="body">
 
     <div id="charts">
+        <!--<div>-->
+            <!--<div id="data-count1" class="title">-->
+                <!--<span class="filter-count"></span> selected out of <span class="total-count"></span> cases | <a-->
+                    <!--class="reset-all title"-->
+                    <!--href="javascript:dc.filterAll(); renderAll();">reset all</a>-->
+            <!--</div>-->
+        <!--</div>-->
         <div>
-            <div id="location-chart" class="dc-chart inline-div align-top">
-                <span class="title" class="inline-div">Cases by Location</span>
-                <a class="reset title" href="javascript:locationChart.filterAll();dc.redrawAll();"
-                   style="display: none;">reset</a>
+            <div class="inline-div">
+                <div id="location-chart" class="dc-chart align-top">
+                    <span class="title" class="inline-div">Cases by Location</span>
+                    <a class="reset title" href="javascript:locationChart.filterAll();dc.redrawAll();"
+                       style="display: none;">reset</a>
+                </div>
+                <div id="death-chart" class="dc-chart align-bottom">
+                    <span class="title">By Outcome</span>
+                    <a class="reset title" href="javascript:deathChart.filterAll();dc.redrawAll();"
+                       style="display: none;">reset</a>
+                </div>
             </div>
-            <div id="death-chart" class="dc-chart inline-div align-bottom">
-                <span class="title">By Outcome</span>
-                <a class="reset title" href="javascript:deathChart.filterAll();dc.redrawAll();"
-                   style="display: none;">reset</a>
-            </div>
-            <!--
             <div id="map" class="inline-div align-top"></div>
-            -->
         </div>
         <div id="time-chart" class="dc-chart">
             <span class="title">Cases</span>
@@ -335,7 +342,7 @@ div.notes {
         </div>
     </div>
     <div>
-        <div id="data-count" class="title">
+        <div id="data-count2" class="title">
             <span class="filter-count"></span> selected out of <span class="total-count"></span> cases | <a
                 class="reset-all title"
                 href="javascript:dc.filterAll(); renderAll();">reset all</a>
@@ -369,6 +376,8 @@ div.notes {
 
 <script src="js/crossfilter.min.js"></script>
 <script src="js/d3.min.js"></script>
+<script src="js/d3.geo.projection.v0.min.js"></script>
+<script src="js/colorbrewer.js"></script>
 <script src="js/dc.js"></script>
 <script src="js/queue.min.js"></script>
 <script src="js/leaflet.js"></script>
@@ -382,6 +391,7 @@ div.notes {
 
 <script>
 
+var map = dc.geoChoroplethChart("#map");
 var timeChart = dc.barChart("#time-chart");
 var cumulativeChart = dc.lineChart("#cumulative-chart");
 var locationChart = dc.rowChart("#location-chart");
@@ -410,7 +420,7 @@ dc.constants.EVENT_DELAY = 0;
 //}).addTo(map);
 
 queue()
-        .defer(d3.json, "data/countries.geojson")
+        .defer(d3.json, "data/countries_50m.json")
 //        .defer(d3.json, "data/locations.json")
         .defer(d3.csv, "data/cases.csv")
         .await(ready);
@@ -470,11 +480,11 @@ function ready(error, countryData, /*locationData, */caseData) {
                     var last = country.cumulative[country.cumulative.length - 1];
 
                     if (c.cases.length === 0) {
-                        c.cases = last.cases;
+                        c.cases = (last ? last.cases : 0);
                     }
 
                     if (c.deaths.length === 0) {
-                        c.deaths = last.deaths;
+                        c.deaths = (last ? last.deaths : 0);
                     }
 
                     // cast to integer
@@ -574,13 +584,70 @@ function ready(error, countryData, /*locationData, */caseData) {
             countryGroups = countryFilter.group(function (d) {
                 return d;
             }),
+            countryCountGroup = countryFilter.group().reduceSum(function (d) {
+                return 1;
+            }),
+
+            countryCumulativeGroup = {
+                all: function () {
+                    var cumulate = 0;
+                    var g = [];
+                    countryCountGroup.all().forEach(function (d, i) {
+                        cumulate += d.value;
+                        g.push({key: d.key, value: cumulate})
+                    });
+                    return g;
+                }
+            },
             deathFilter = crossFilter.dimension(function (d) {
                 return d.isDead;
             }),
             deathGroups = deathFilter.group(function (d) {
                 return d;
-            })
+            });
 
+    var width = 640,
+            height = 320;
+
+    var projection = d3.geo.robinson()
+            .scale(1000)
+            .translate([width * 0.75, height * 1.0])
+            .precision(.1);
+        var scheme = colorbrewer.YlOrRd[9];
+    var colors = [ '#CCC' ].concat(scheme);
+    var color2 = d3.scale.threshold()
+            .domain([0, 1E-10, 1E-3, 2E-3, 5E-3, 1E-2, 2E-2, 5E-2, 1E-1, 2E-1, 1])
+            .range(colors);
+
+    map.width(width)
+            .height(height)
+            .transitionDuration(100)
+            .dimension(countryFilter)
+            .group(countryCountGroup)
+            .colors(colors)
+//            .colors(["#ccc", "#E2F2FF","#C4E4FF","#9ED2FF","#81C5FF","#6BBAFF","#51AEFF","#36A2FF","#1E96FF","#0089FF"])
+            .colorDomain([0, 1000])
+            .overlayGeoJson(countryData.features, "country", function (d) {
+                return d.properties.admin;
+            })
+            .projection(projection)
+            .on("filtered", function () {
+                dc.renderAll();
+            });
+//            .title(function (d) {
+//                var c = countryMap[iso3Map[d.key]];
+//                if (c !== undefined) {
+//                    return "Location: " + d.key +
+//                            "\rPoultry: " + (!isNaN(c.poultry) ? f3(c.poultry) + " (" + f2(c.abundance.poultry) + ")" : "n/a") +
+//                            "\rChickens: " + (!isNaN(c.chicken) ? f3(c.chicken) + " (" + f2(c.abundance.chicken) + ")" : "n/a") +
+//                            "\rDucks: " + (!isNaN(c.duck) ? f3(c.duck) + " (" + f2(c.abundance.duck) + ")" : "n/a") +
+//                            "\rSwine: " + (!isNaN(c.swine) ? f3(c.swine) + " (" + f2(c.abundance.swine) + ")" : "n/a") +
+//                            "\rGlobal proportion of livestock: " + (!isNaN(c.abundance.all) ? f1(c.abundance.all) : "n/a");
+//                } else {
+//                    return "Location: " + d.key + "\rLivestock data: n/a"
+//
+//                }
+//            });
     timeChart.width(900)
             .height(120)
             .transitionDuration(0)
@@ -661,8 +728,8 @@ function ready(error, countryData, /*locationData, */caseData) {
 
 
     // Render the initial lists.
-    var list = d3.selectAll(".list")
-            .data([caseList]);
+//    var list = d3.selectAll(".list")
+//            .data([caseList]);
 
     // Render the total.
     dc.dataCount("#data-count")
@@ -718,7 +785,7 @@ function ready(error, countryData, /*locationData, */caseData) {
 
     // Whenever the brush moves, re-rendering everything.
     function renderAll() {
-        list.each(render);
+//        list.each(render);
         dc.renderAll();
 //        updateMap();
     }
@@ -747,91 +814,91 @@ function ready(error, countryData, /*locationData, */caseData) {
         gender.filter(args.gender);
     }
 
-    function caseList(div) {
-        var casesByDate = nestByDate.entries(onsetDate.top(Infinity));
-
-        div.each(function () {
-            var month = d3.select(this).selectAll(".month")
-                    .data(casesByDate, function (d) {
-                        return d.key;
-                    });
-
-            month.enter().append("div")
-                    .attr("class", "month title")
-                    .text(function (d) {
-                        return formatMonth(d.values[0].date);
-                    });
-
-            month.exit().remove();
-
-            var individual = month.order().selectAll(".individual")
-                    .data(function (d) {
-                        return d.values;
-                    }, function (d) {
-                        return d.index;
-                    });
-
-            var individualEnter = individual.enter().append("div")
-                    .attr("class", "individual");
-
-            individualEnter.append("div")
-                    .attr("class", "onset")
-                    .text(function (d) {
-                        return formatPrettyDate(d.date);
-                    });
-
-            individualEnter.append("div")
-                    .attr("class", "death")
-                    .text(function (d) {
-                        return (d.death != null ? formatPrettyDate(d.death) : "");
-                    });
-
-            individualEnter.append("div")
-                    .attr("class", "age")
-                    .text(function (d) {
-                        return d.age;
-                    });
-
-            individualEnter.append("div")
-                    .attr("class", "gender")
-                    .text(function (d) {
-                        return d.gender;
-                    });
-
-            individualEnter.append("div")
-                    .attr("class", "province")
-                    .text(function (d) {
-                        return d.province.name;
-                    });
-
-            individualEnter.append("div")
-                    .attr("class", "city")
-                    .text(function (d) {
-                        return d.city ? d.city.name : "-";
-                    });
-
-            individualEnter.append("div")
-                    .attr("class", "notes")
-                    .text(function (d) {
-                        return d.notes;
-                    });
-
-            individualEnter.append("div")
-                    .attr("class", "ref")
-                    .append("a")
-                    .attr("href", function (d) {
-                        return d.citation;
-                    })
-                    .attr("target", "_blank")
-                    .text(function (d) {
-                        return d.citation != null && d.citation.length > 0 ? "Ref" : "";
-                    });
-
-            individual.exit().remove();
-
-            individual.order();
-        });
-    } //function caseList(div)
+//    function caseList(div) {
+//        var casesByDate = nestByDate.entries(onsetDate.top(Infinity));
+//
+//        div.each(function () {
+//            var month = d3.select(this).selectAll(".month")
+//                    .data(casesByDate, function (d) {
+//                        return d.key;
+//                    });
+//
+//            month.enter().append("div")
+//                    .attr("class", "month title")
+//                    .text(function (d) {
+//                        return formatMonth(d.values[0].date);
+//                    });
+//
+//            month.exit().remove();
+//
+//            var individual = month.order().selectAll(".individual")
+//                    .data(function (d) {
+//                        return d.values;
+//                    }, function (d) {
+//                        return d.index;
+//                    });
+//
+//            var individualEnter = individual.enter().append("div")
+//                    .attr("class", "individual");
+//
+//            individualEnter.append("div")
+//                    .attr("class", "onset")
+//                    .text(function (d) {
+//                        return formatPrettyDate(d.date);
+//                    });
+//
+//            individualEnter.append("div")
+//                    .attr("class", "death")
+//                    .text(function (d) {
+//                        return (d.death != null ? formatPrettyDate(d.death) : "");
+//                    });
+//
+//            individualEnter.append("div")
+//                    .attr("class", "age")
+//                    .text(function (d) {
+//                        return d.age;
+//                    });
+//
+//            individualEnter.append("div")
+//                    .attr("class", "gender")
+//                    .text(function (d) {
+//                        return d.gender;
+//                    });
+//
+//            individualEnter.append("div")
+//                    .attr("class", "province")
+//                    .text(function (d) {
+//                        return d.province.name;
+//                    });
+//
+//            individualEnter.append("div")
+//                    .attr("class", "city")
+//                    .text(function (d) {
+//                        return d.city ? d.city.name : "-";
+//                    });
+//
+//            individualEnter.append("div")
+//                    .attr("class", "notes")
+//                    .text(function (d) {
+//                        return d.notes;
+//                    });
+//
+//            individualEnter.append("div")
+//                    .attr("class", "ref")
+//                    .append("a")
+//                    .attr("href", function (d) {
+//                        return d.citation;
+//                    })
+//                    .attr("target", "_blank")
+//                    .text(function (d) {
+//                        return d.citation != null && d.citation.length > 0 ? "Ref" : "";
+//                    });
+//
+//            individual.exit().remove();
+//
+//            individual.order();
+//        });
+//    } //function caseList(div)
 
 } // function ready(error, cityData, caseData)
 
