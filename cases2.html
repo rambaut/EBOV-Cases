@@ -475,6 +475,8 @@ function ready(error, countryData, /*locationData, */caseData) {
                         date: d.date,
                         cases: d.cases_cumulative,
                         deaths: d.deaths_cumulative
+                        confirmedCases: d.cases_cumulative_confirmed,
+                        confirmedDeaths: d.deaths_cumulative_confirmed
                     };
 
                     var last = country.cumulative[country.cumulative.length - 1];
@@ -487,9 +489,19 @@ function ready(error, countryData, /*locationData, */caseData) {
                         c.deaths = (last ? last.deaths : 0);
                     }
 
+                    if (c.confirmedCases.length === 0) {
+                        c.confirmedCases = (last ? last.confirmedCases : 0);
+                    }
+
+                    if (c.confirmedDeaths.length === 0) {
+                        c.confirmedDeaths = (last ? last.confirmedDeaths : 0);
+                    }
+
                     // cast to integer
                     c.cases = +c.cases;
                     c.deaths = +c.deaths;
+                    c.confirmedCases = +c.confirmedCases;
+                    c.confirmedDeaths = +c.confirmedDeaths;
 
                     country.cumulative.push(c);
 
@@ -529,6 +541,14 @@ function ready(error, countryData, /*locationData, */caseData) {
             if (prev.deaths > d2.deaths) {
                 prev.deaths = d2.deaths;
             }
+            if (prev.confirmedCases > d2.confirmedCases) {
+                console.log("Unexpected drop in confirmed cases, " + d.name + ", " + d.date);
+                prev.confirmedCases = d2.confirmedCases;
+            }
+            if (prev.confirmedDeaths > d2.confirmedDeaths) {
+                console.log("Unexpected drop in confirmed deaths, " + d.name + ", " + d.date);
+                prev.confirmedDeaths = d2.confirmedDeaths;
+            }
         }
 
         // create items for each new case and death
@@ -538,6 +558,9 @@ function ready(error, countryData, /*locationData, */caseData) {
 
             var caseCount = d2.cases - prev.cases;
             var deathCount = d2.deaths - prev.deaths;
+
+            var confirmedCaseCount = d2.confirmedCases - prev.confirmedCases;
+            var confirmedDeathCount = d2.confirmedDeaths - prev.confirmedDeaths;
 
             for (j = 0; j < caseCount; j++) {
                 var c = {
@@ -603,6 +626,12 @@ function ready(error, countryData, /*locationData, */caseData) {
                 return d.isDead;
             }),
             deathGroups = deathFilter.group(function (d) {
+                return d;
+            }),
+            confirmedFilter = crossFilter.dimension(function (d) {
+                return d.isConfirmed;
+            }),
+            confirmedGroups = confirmedFilter.group(function (d) {
                 return d;
             });
 
