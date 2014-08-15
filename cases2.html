@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-<title>H7N9 Avian Influenza Cases</title>
+<title>EBOV outbreak</title>
 <link rel="stylesheet" type="text/css" href="css/dc.css"/>
 <link rel="stylesheet" href="css/leaflet.css"/>
 <link rel="stylesheet" href="css/MarkerCluster.css"/>
@@ -58,6 +58,16 @@ h1, h2 {
     float: none;
 }
 
+#map .selected path {
+    stroke: none;
+    fill-opacity: 1;
+}
+
+#map .deselected path {
+    stroke: none;
+    fill-opacity: .5;
+}
+
 .dc-chart g.row text {
     fill: black;
     font-family: Helvetica, Arial, sans-serif;
@@ -100,40 +110,26 @@ h1, h2 {
     stroke: #666;
 }
 
-#onset-chart {
-    width: 920px;
+#time-chart {
+    width: 900px;
     height: 170px;
 }
 
-#onset-chart .bar {
+#time-chart .bar {
     fill: teal;
 }
 
-#province-chart {
+#cumulative-chart {
+    width: 900px;
+    height: 170px;
+}
+
+#location-chart {
     width: 280px;
     height: 180px;
 }
 
-#age-chart {
-    width: 320px;
-    height: 180px;
-}
-
-#age-chart .bar {
-    fill: #8B475D;
-}
-
-#gender-chart {
-    width: 180px;
-    height: 180px;
-}
-
 #death-chart {
-    width: 180px;
-    height: 180px;
-}
-
-#cluster-chart {
     width: 180px;
     height: 180px;
 }
@@ -298,8 +294,8 @@ div.notes {
     }
 
     #map {
-        width: 600px;
-        height: 400px;
+        width: 900px;
+        height: 320px;
     }
 
 
@@ -308,29 +304,34 @@ div.notes {
 
 <div id="body">
 
+    <div>
+        <div id="data-count" class="title">
+            <span class="filter-count"></span> selected out of <span class="total-count"></span> cases | <a
+                class="reset-all title"
+                href="javascript:dc.filterAll(); dc.renderAll();">reset all</a>
+        </div>
+    </div>
     <div id="charts">
         <!--<div>-->
-            <!--<div id="data-count1" class="title">-->
-                <!--<span class="filter-count"></span> selected out of <span class="total-count"></span> cases | <a-->
-                    <!--class="reset-all title"-->
-                    <!--href="javascript:dc.filterAll(); renderAll();">reset all</a>-->
-            <!--</div>-->
+        <!--<div id="data-count1" class="title">-->
+        <!--<span class="filter-count"></span> selected out of <span class="total-count"></span> cases | <a-->
+        <!--class="reset-all title"-->
+        <!--href="javascript:dc.filterAll(); renderAll();">reset all</a>-->
         <!--</div>-->
-        <div>
-            <div class="inline-div">
-                <div id="location-chart" class="dc-chart align-top">
+        <!--</div>-->
+            <div class="block-div">
+                <div id="location-chart" class="dc-chart align-bottom inline-div">
                     <span class="title" class="inline-div">Cases by Location</span>
                     <a class="reset title" href="javascript:locationChart.filterAll();dc.redrawAll();"
                        style="display: none;">reset</a>
                 </div>
-                <div id="death-chart" class="dc-chart align-bottom">
+                <div id="death-chart" class="dc-chart align-bottom inline-div">
                     <span class="title">By Outcome</span>
                     <a class="reset title" href="javascript:deathChart.filterAll();dc.redrawAll();"
                        style="display: none;">reset</a>
                 </div>
+                <div id="map" class="inline-div align-bottom inline-div"></div>
             </div>
-            <div id="map" class="inline-div align-top"></div>
-        </div>
         <div id="time-chart" class="dc-chart">
             <span class="title">Cases</span>
             <a class="reset title" href="javascript:timeChart.filterAll();dc.redrawAll();"
@@ -339,13 +340,6 @@ div.notes {
         <div id="cumulative-chart" class="dc-chart">
             <span class="title">Cases Cumulative</span>
             <a class="reset title" href="javascript:cumulativeChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
-        </div>
-    </div>
-    <div>
-        <div id="data-count2" class="title">
-            <span class="filter-count"></span> selected out of <span class="total-count"></span> cases | <a
-                class="reset-all title"
-                href="javascript:dc.filterAll(); renderAll();">reset all</a>
         </div>
     </div>
     <!--
@@ -398,26 +392,6 @@ var locationChart = dc.rowChart("#location-chart");
 var deathChart = dc.rowChart("#death-chart");
 
 dc.constants.EVENT_DELAY = 0;
-
-//var map = L.map('map', {
-//    center: [31.25, 121.4333333],
-//    zoom: 4,
-//    maxZoom: 8,
-//    minZoom: 2
-//});
-//
-//map.attributionControl.removeFrom(map);
-//
-//L.control.scale().addTo(map);
-//
-////var layer = new L.StamenTileLayer('toner');
-////map.addLayer(layer);
-//
-//L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
-//    key: "ffed45bc02bf40009f3d5c7e4dcf7f63",
-//    styleId: 44909
-////		styleId: 104059
-//}).addTo(map);
 
 queue()
         .defer(d3.json, "data/countries_50m.json")
@@ -542,11 +516,11 @@ function ready(error, countryData, /*locationData, */caseData) {
                 prev.deaths = d2.deaths;
             }
             if (prev.confirmedCases > d2.confirmedCases) {
-                console.log("Unexpected drop in confirmed cases, " + d.name + ", " + d.date);
+                console.log("Unexpected drop in confirmed cases, " + d.name + ", " + d2.date);
                 prev.confirmedCases = d2.confirmedCases;
             }
             if (prev.confirmedDeaths > d2.confirmedDeaths) {
-                console.log("Unexpected drop in confirmed deaths, " + d.name + ", " + d.date);
+                console.log("Unexpected drop in confirmed deaths, " + d.name + ", " + d2.date);
                 prev.confirmedDeaths = d2.confirmedDeaths;
             }
         }
@@ -607,8 +581,11 @@ function ready(error, countryData, /*locationData, */caseData) {
             countryGroups = countryFilter.group(function (d) {
                 return d;
             }),
-            countryCountGroup = countryFilter.group().reduceSum(function (d) {
-                return 1;
+            countryFilter2 = crossFilter.dimension(function (d) {
+                return d.country.name;
+            }),
+            countryGroups2 = countryFilter.group(function (d) {
+                return d;
             }),
 
             countryCumulativeGroup = {
@@ -635,48 +612,48 @@ function ready(error, countryData, /*locationData, */caseData) {
                 return d;
             });
 
-    var width = 640,
+    var width = 800,
             height = 320;
 
     var projection = d3.geo.robinson()
             .scale(1000)
-            .translate([width * 0.75, height * 1.0])
+            .translate([width * 0.5, height * 1.0])
             .precision(.1);
-        var scheme = colorbrewer.YlOrRd[9];
+    var scheme = colorbrewer.YlOrRd[9];
     var colors = [ '#CCC' ].concat(scheme);
-    var color2 = d3.scale.threshold()
-            .domain([0, 1E-10, 1E-3, 2E-3, 5E-3, 1E-2, 2E-2, 5E-2, 1E-1, 2E-1, 1])
-            .range(colors);
+    var color2 = d3.scale.linear()
+            .domain([0, 1000])
+            .range(scheme);
+
 
     map.width(width)
             .height(height)
             .transitionDuration(100)
-            .dimension(countryFilter)
-            .group(countryCountGroup)
+            .dimension(countryFilter2)
+            .group(countryGroups2)
             .colors(colors)
-//            .colors(["#ccc", "#E2F2FF","#C4E4FF","#9ED2FF","#81C5FF","#6BBAFF","#51AEFF","#36A2FF","#1E96FF","#0089FF"])
-            .colorDomain([0, 1000])
+            .colorDomain([-100, 1000])
+//            .colorAccessor(function (d) {
+//                if (d === 0) {
+//                    return 0;
+//                }
+//                return d;
+//            })
             .overlayGeoJson(countryData.features, "country", function (d) {
                 return d.properties.admin;
             })
             .projection(projection)
-            .on("filtered", function () {
-                dc.renderAll();
-            });
-//            .title(function (d) {
-//                var c = countryMap[iso3Map[d.key]];
-//                if (c !== undefined) {
-//                    return "Location: " + d.key +
-//                            "\rPoultry: " + (!isNaN(c.poultry) ? f3(c.poultry) + " (" + f2(c.abundance.poultry) + ")" : "n/a") +
-//                            "\rChickens: " + (!isNaN(c.chicken) ? f3(c.chicken) + " (" + f2(c.abundance.chicken) + ")" : "n/a") +
-//                            "\rDucks: " + (!isNaN(c.duck) ? f3(c.duck) + " (" + f2(c.abundance.duck) + ")" : "n/a") +
-//                            "\rSwine: " + (!isNaN(c.swine) ? f3(c.swine) + " (" + f2(c.abundance.swine) + ")" : "n/a") +
-//                            "\rGlobal proportion of livestock: " + (!isNaN(c.abundance.all) ? f1(c.abundance.all) : "n/a");
-//                } else {
-//                    return "Location: " + d.key + "\rLivestock data: n/a"
-//
-//                }
+//            .on("filtered", function () {
+//                dc.redrawAll();
 //            });
+            .title(function (d) {
+                if (d.value === undefined) {
+                    return "Country: " + d.key + "\rno cases";
+                } else {
+                    return "Country: " + d.key + "\rcases: " + d.value;
+                }
+            });
+
     timeChart.width(900)
             .height(120)
             .transitionDuration(0)
@@ -685,12 +662,10 @@ function ready(error, countryData, /*locationData, */caseData) {
             .group(dateGroups)
             .centerBar(true)
             .gap(-1)
+            .elasticY(true)
             .x(d3.time.scale().domain([new Date(2014, 2, 1), new Date()]))
             .round(d3.time.day.round)
-            .xUnits(d3.time.days)
-            .on("filtered", function (d) {
-                renderAll();
-            });
+            .xUnits(d3.time.days);
 
     cumulativeChart
             .width(900)
@@ -707,27 +682,21 @@ function ready(error, countryData, /*locationData, */caseData) {
             .renderHorizontalGridLines(true)
             .x(d3.time.scale().domain([new Date(2014, 2, 1), new Date()]))
             .round(d3.time.day.round)
-            .xUnits(d3.time.days)
-            .on("filtered", function (d) {
-                renderAll();
-            });
+            .xUnits(d3.time.days);
 
     locationChart.width(280)
-            .height(120)
+            .height(140)
             .transitionDuration(0)
             .margins({top: 0, right: 20, bottom: 38, left: 20})
             .dimension(countryFilter)
             .group(countryGroups)
             .elasticX(false)
-            .colors(['LightSteelBlue'])
+            .colors(d3.scale.category20c())
             .label(function (d) {
                 return d.value + " " + d.key;
             })
             .title(function (d) {
                 return d.value;
-            })
-            .on("filtered", function () {
-                renderAll();
             })
             .xAxis().ticks(5);
 
@@ -744,15 +713,12 @@ function ready(error, countryData, /*locationData, */caseData) {
             .label(function (d) {
                 var k = d.value;
                 var n = deathGroups.all()[0].value + deathGroups.all()[1].value;
-                return k + " " + (d.key ? "dead" : "alive") + " (" + formatPercent(k / n) + ")";
+                return k + (n > 0 ? " " + (d.key ? "dead" : "unknown") + " (" + formatPercent(k / n) + ")" : "");
             })
             .title(function (d) {
                 return d.value;
             })
             .elasticX(false)
-            .on("filtered", function () {
-                renderAll();
-            })
             .xAxis().ticks(5);
 
 
@@ -805,42 +771,42 @@ function ready(error, countryData, /*locationData, */caseData) {
 //        });
 //    }
 
-    renderAll();
+    dc.renderAll();
 
-    // Renders the specified chart or list.
-    function render(method) {
-        d3.select(this).call(method);
-    }
-
-    // Whenever the brush moves, re-rendering everything.
-    function renderAll() {
-//        list.each(render);
-        dc.renderAll();
-//        updateMap();
-    }
+//    // Renders the specified chart or list.
+//    function render(method) {
+//        d3.select(this).call(method);
+//    }
+//
+//    // Whenever the brush moves, re-rendering everything.
+//    function renderAll() {
+////        list.each(render);
+//        dc.renderAll();
+////        updateMap();
+//    }
 
     // Like d3.time.format, but faster.
     function parseDate(d) {
         return new Date(2001,
-                d.substring(0, 2) - 1,
+                        d.substring(0, 2) - 1,
                 d.substring(2, 4),
                 d.substring(4, 6),
                 d.substring(6, 8));
     }
 
-    window.filter = function (filters) {
-        renderAll();
-    };
-
-    window.reset = function (i) {
-        renderAll();
-    };
+//    window.filter = function (filters) {
+//        renderAll();
+//    };
+//
+//    window.reset = function (i) {
+//        renderAll();
+//    };
 
     var args = getUrlVars();
 
-    if ('gender' in args) {
-        console.log(args.gender);
-        gender.filter(args.gender);
+    if ('country' in args) {
+        console.log(args.country);
+        countryFilter.filter(args.country);
     }
 
 //    function caseList(div) {
