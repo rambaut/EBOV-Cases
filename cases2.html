@@ -121,7 +121,7 @@ h1, h2 {
 
 #cumulative-chart {
     width: 900px;
-    height: 170px;
+    height: 320px;
 }
 
 #location-chart {
@@ -669,7 +669,7 @@ function ready(error, countryData, /*locationData, */caseData) {
 
     cumulativeChart
             .width(900)
-            .height(120)
+            .height(320)
             .renderArea(true)
             .transitionDuration(0)
             .rangeChart(timeChart)
@@ -679,7 +679,8 @@ function ready(error, countryData, /*locationData, */caseData) {
 //            .stack(countryGroups, "Country", function (d) {
 //                return d.value;
 //            })
-            .renderHorizontalGridLines(true)
+            .elasticY(true)
+			.renderHorizontalGridLines(true)
             .x(d3.time.scale().domain([new Date(2014, 2, 1), new Date()]))
             .round(d3.time.day.round)
             .xUnits(d3.time.days);
