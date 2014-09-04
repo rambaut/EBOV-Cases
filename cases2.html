@@ -559,7 +559,7 @@ function ready(error, countryData, /*locationData, */caseData) {
             dateFilter = crossFilter.dimension(function (d) {
                 return d.date;
             }),
-            dateGroups = dateFilter.group(d3.time.day),
+            dateGroups = dateFilter.group(d3.time.week),
             _group = dateFilter.group().reduceSum(function (d) {
                 return 1;
             }),
@@ -656,22 +656,22 @@ function ready(error, countryData, /*locationData, */caseData) {
 
     timeChart.width(900)
             .height(120)
-            .transitionDuration(0)
+            .transitionDuration(100)
             .margins({top: 10, right: 20, bottom: 20, left: 40})
             .dimension(dateFilter)
             .group(dateGroups)
             .centerBar(true)
-            .gap(-1)
+            .gap(1)
             .elasticY(true)
             .x(d3.time.scale().domain([new Date(2014, 2, 1), new Date()]))
-            .round(d3.time.day.round)
-            .xUnits(d3.time.days);
+            .round(d3.time.week.round)
+            .xUnits(d3.time.weeks);
 
     cumulativeChart
             .width(900)
             .height(320)
             .renderArea(true)
-            .transitionDuration(0)
+            .transitionDuration(100)
             .rangeChart(timeChart)
             .margins({top: 10, right: 20, bottom: 20, left: 40})
             .dimension(dateFilter)
@@ -687,7 +687,7 @@ function ready(error, countryData, /*locationData, */caseData) {
 
     locationChart.width(280)
             .height(140)
-            .transitionDuration(0)
+            .transitionDuration(100)
             .margins({top: 0, right: 20, bottom: 38, left: 20})
             .dimension(countryFilter)
             .group(countryGroups)
@@ -704,7 +704,7 @@ function ready(error, countryData, /*locationData, */caseData) {
     console.log(deathGroups.all());
 
     deathChart
-            .transitionDuration(0)
+            .transitionDuration(100)
             .width(180)
             .height(80)
             .margins({top: 0, right: 0, bottom: 20, left: 20})
