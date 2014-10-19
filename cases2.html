@@ -112,7 +112,7 @@ h1, h2 {
 
 #time-chart {
     width: 900px;
-    height: 170px;
+    height: 240px;
 }
 
 #time-chart .bar {
@@ -333,7 +333,7 @@ div.notes {
                 <div id="map" class="inline-div align-bottom inline-div"></div>
             </div>
         <div id="time-chart" class="dc-chart">
-            <span class="title">Cases</span>
+            <span class="title">New cases per week</span>
             <a class="reset title" href="javascript:timeChart.filterAll();dc.redrawAll();"
                style="display: none;">reset</a>
         </div>
@@ -655,7 +655,7 @@ function ready(error, countryData, /*locationData, */caseData) {
             });
 
     timeChart.width(900)
-            .height(120)
+            .height(240)
             .transitionDuration(100)
             .margins({top: 10, right: 20, bottom: 20, left: 40})
             .dimension(dateFilter)
